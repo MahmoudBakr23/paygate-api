@@ -1,7 +1,7 @@
 inherit_gem:
   rubocop-rails-omakase: rubocop.yml
 
-require:
+plugins:
   - rubocop-rspec
   - rubocop-performance
 
@@ -14,6 +14,47 @@ AllCops:
     - "bin/**/*"
     - "vendor/**/*"
 
+# ── Formatting ────────────────────────────────────────────────────────────────
+# Handled by the editor. Not enforced in CI.
+Layout:
+  Enabled: false
+
+# ── Style ─────────────────────────────────────────────────────────────────────
+Style/Documentation:
+  Enabled: false
+
+Style/FrozenStringLiteralComment:
+  Enabled: false
+
+Style/ClassAndModuleChildren:
+  Enabled: false
+
+# ── Metrics ───────────────────────────────────────────────────────────────────
+Metrics/MethodLength:
+  Max: 20
+
+Metrics/ClassLength:
+  Max: 150
+
+Metrics/BlockLength:
+  Max: 50
+  Exclude:
+    - "spec/**/*"
+    - "config/routes.rb"
+
+Metrics/ParameterLists:
+  Max: 8
+
+Metrics/AbcSize:
+  Enabled: false
+
+Metrics/CyclomaticComplexity:
+  Enabled: false
+
+Metrics/PerceivedComplexity:
+  Enabled: false
+
+# ── RSpec ─────────────────────────────────────────────────────────────────────
 RSpec/ExampleLength:
   Max: 25
 
@@ -23,5 +64,20 @@ RSpec/MultipleExpectations:
 RSpec/NestedGroups:
   Max: 4
 
-Metrics/ParameterLists:
-  Max: 8
+RSpec/LeadingSubject:
+  Enabled: false
+
+RSpec/EmptyLineAfterFinalLet:
+  Enabled: false
+
+RSpec/ContextWording:
+  Enabled: false
+
+RSpec/PredicateMatcher:
+  Enabled: false
+
+RSpec/IndexedLet:
+  Enabled: false
+
+RSpec/LetSetup:
+  Enabled: false

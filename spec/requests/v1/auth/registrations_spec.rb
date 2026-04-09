@@ -19,17 +19,17 @@ RSpec.describe "POST /v1/auth/register" do
     create(:merchant, email: "acme@example.com")
     post "/v1/auth/register", params: valid_params, as: :json
 
-    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response).to have_http_status(:unprocessable_content)
     expect(json_response[:error][:code]).to eq("validation_error")
   end
 
   it "returns 422 on missing name" do
     post "/v1/auth/register", params: valid_params.except(:name), as: :json
-    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response).to have_http_status(:unprocessable_content)
   end
 
   it "returns 422 on invalid email format" do
     post "/v1/auth/register", params: valid_params.merge(email: "notanemail"), as: :json
-    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response).to have_http_status(:unprocessable_content)
   end
 end

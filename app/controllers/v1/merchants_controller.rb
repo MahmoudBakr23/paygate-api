@@ -10,7 +10,7 @@ module V1
       current_merchant.update!(merchant_params)
       render json: MerchantBlueprint.render(current_merchant)
     rescue ActiveRecord::RecordInvalid => e
-      render_error(status: :unprocessable_entity, code: "validation_error", message: e.message)
+      render_error(status: :unprocessable_content, code: "validation_error", message: e.message)
     end
 
     private

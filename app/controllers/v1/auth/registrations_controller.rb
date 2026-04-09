@@ -17,7 +17,7 @@ module V1
           token: result.token
         }, status: :created
       rescue ActiveRecord::RecordInvalid => e
-        render_error(status: :unprocessable_entity, code: "validation_error", message: e.message)
+        render_error(status: :unprocessable_content, code: "validation_error", message: e.message)
       end
     end
   end

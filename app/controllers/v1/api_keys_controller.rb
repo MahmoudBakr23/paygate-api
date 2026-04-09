@@ -11,7 +11,7 @@ module V1
       environment = params.fetch(:environment, "sandbox")
       unless ApiKey::ENVIRONMENTS.include?(environment)
         return render_error(
-          status: :unprocessable_entity,
+          status: :unprocessable_content,
           code: "invalid_environment",
           message: "environment must be one of: #{ApiKey::ENVIRONMENTS.join(', ')}"
         )

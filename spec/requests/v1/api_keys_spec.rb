@@ -56,7 +56,7 @@ RSpec.describe "API Keys (/v1/me/api_keys)" do
 
     it "returns 422 on invalid environment" do
       post "/v1/me/api_keys", params: { environment: "staging" }, headers: headers, as: :json
-      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response).to have_http_status(:unprocessable_content)
     end
   end
 
