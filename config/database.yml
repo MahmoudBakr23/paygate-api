@@ -1,0 +1,17 @@
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+
+development:
+  <<: *default
+  database: paygate_api_development
+
+test:
+  <<: *default
+  database: paygate_api_test
+
+production:
+  <<: *default
+  url: <%= ENV["DATABASE_URL"] %>

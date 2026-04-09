@@ -1,0 +1,5 @@
+:concurrency: 10
+:queues:
+  - [webhook_delivery, 5]
+  - [default, 3]
+  - [reconciliation, 1]

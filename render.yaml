@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: paygate-api
+    runtime: ruby
+    plan: free
+    region: frankfurt
+    buildCommand: "./bin/render-build.sh"
+    startCommand: "bundle exec puma -C config/puma.rb"
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: paygate-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: paygate-redis
+          property: connectionString
+      - key: RAILS_MASTER_KEY
+        sync: false
+      - key: RAILS_ENV
+        value: production
+      - key: RAILS_LOG_LEVEL
+        value: info
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+
+  - type: redis
+    name: paygate-redis
+    plan: free
+    maxmemoryPolicy: noeviction
+
+databases:
+  - name: paygate-db
+    plan: free
+    databaseName: paygate_api_production
+    user: paygate_api
