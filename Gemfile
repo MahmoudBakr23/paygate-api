@@ -8,7 +8,7 @@ gem "rack-cors"
 gem "rack-attack"
 gem "redis", "~> 5.0"
 gem "sidekiq", "~> 7.0"
-gem "jwt", "~> 2.9"
+gem "jwt", "~> 3.1"
 gem "blueprinter"
 gem "lograge"
 gem "tzinfo-data", platforms: %i[ windows jruby ]
