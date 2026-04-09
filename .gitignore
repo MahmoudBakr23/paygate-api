@@ -33,3 +33,6 @@
 # Ignore key files for decrypting credentials and more.
 /config/*.key
 
+# Local Claude Code context — not for the repo
+CLAUDE.md
+
