@@ -11,6 +11,7 @@ gem "sidekiq", "~> 8.1"
 gem "jwt", "~> 3.1"
 gem "blueprinter"
 gem "lograge"
+gem "stripe", "~> 13.0"
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 gem "bootsnap", require: false
 gem "kamal", require: false
