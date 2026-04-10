@@ -1,8 +1,12 @@
 default: &default
   adapter: postgresql
   encoding: unicode
-  max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  # Fly Postgres routes connections through PgBouncer in transaction mode.
+  # prepared_statements and advisory_locks are connection-pinned features that
+  # break under a pooler — disable both to stay compatible.
+  prepared_statements: false
+  advisory_locks: false
 
 development:
   <<: *default
