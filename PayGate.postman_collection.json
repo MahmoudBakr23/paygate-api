@@ -1,0 +1,663 @@
+{
+  "info": {
+    "name": "Paygate API",
+    "description": "Payment gateway API abstracting Stripe (Visa/MC/Apple Pay) and Checkout.com (Mada) behind a unified interface.\n\n**Base URL:** https://paygate-api.fly.dev\n\n**Authentication:**\n- API key: `Authorization: Bearer sk_test_xxx`\n- JWT session: `Authorization: Bearer <token from login>`\n\n**Idempotency:** `POST /v1/charges` requires an `Idempotency-Key` header (UUID). Duplicate keys replay the original response.\n\nSandbox Stripe tokens: `tok_visa`, `tok_mastercard`, `tok_amex`\n\nFull OpenAPI spec: https://paygate-api.fly.dev/api-docs",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://paygate-api.fly.dev",
+      "type": "string"
+    },
+    {
+      "key": "secret_key",
+      "value": "sk_test_REPLACE_ME",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "charge_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refund_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "api_key_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "webhook_endpoint_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "entity_id_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('jwt_token', body.token);",
+                  "  pm.collectionVariables.set('secret_key', body.api_keys.secret_key);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Acme Corp\",\n  \"email\": \"acme@example.com\",\n  \"password\": \"Password1!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "auth", "register"]
+            },
+            "description": "Register a new merchant. Returns a JWT, merchant profile, and a sandbox key pair. The `secret_key` is shown once — store it immediately."
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('jwt_token', pm.response.json().token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"acme@example.com\",\n  \"password\": \"Password1!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "auth", "login"]
+            },
+            "description": "Login and obtain a JWT session token."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "auth", "logout"]
+            },
+            "description": "Revoke the current JWT session."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Merchant",
+      "item": [
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{secret_key}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/me",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "me"]
+            },
+            "description": "Retrieve the authenticated merchant's profile."
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Acme Corp Updated\",\n  \"webhook_url\": \"https://merchant.example.com/hooks\",\n  \"enabled_payment_methods\": [\"card\", \"mada\", \"apple_pay\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/me",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "me"]
+            },
+            "description": "Update merchant name, webhook URL, or enabled payment methods."
+          }
+        },
+        {
+          "name": "Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{secret_key}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/me/dashboard",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "me", "dashboard"]
+            },
+            "description": "Aggregated stats: total charges, volume, success rate, volume by payment method."
+          }
+        }
+      ]
+    },
+    {
+      "name": "API Keys",
+      "item": [
+        {
+          "name": "List API Keys",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{secret_key}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/me/api_keys",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "me", "api_keys"]
+            },
+            "description": "List all active (non-revoked) API keys for the merchant."
+          }
+        },
+        {
+          "name": "Generate Key Pair",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('api_key_id', body.api_key.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{secret_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"environment\": \"sandbox\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/me/api_keys",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "me", "api_keys"]
+            },
+            "description": "Generate a new public/secret key pair. The `secret_key` is shown once — store it immediately."
+          }
+        },
+        {
+          "name": "Revoke API Key",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{secret_key}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/me/api_keys/{{api_key_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "me", "api_keys", "{{api_key_id}}"]
+            },
+            "description": "Revoke an API key by ID. Sets `revoked_at`; key can no longer authenticate."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Charges",
+      "item": [
+        {
+          "name": "Create Charge",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('charge_id', pm.response.json().id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{secret_key}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}", "description": "Unique per charge attempt. Duplicate keys replay the original response." }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 1000,\n  \"currency\": \"SAR\",\n  \"payment_method\": \"card\",\n  \"token\": \"tok_visa\",\n  \"metadata\": {\n    \"order_id\": \"ORD-42\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/charges",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "charges"]
+            },
+            "description": "Create a charge. `amount` is in the smallest currency unit (halalas for SAR). Sandbox tokens: `tok_visa`, `tok_mastercard`. Requires `Idempotency-Key` header."
+          }
+        },
+        {
+          "name": "Create Charge (Mada)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('charge_id', pm.response.json().id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{secret_key}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 2500,\n  \"currency\": \"SAR\",\n  \"payment_method\": \"mada\",\n  \"token\": \"cko_test_token\",\n  \"metadata\": {\n    \"order_id\": \"ORD-43\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/charges",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "charges"]
+            },
+            "description": "Create a Mada charge. Routes through the Checkout.com adapter."
+          }
+        },
+        {
+          "name": "List Charges",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{secret_key}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/charges",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "charges"],
+              "query": [
+                { "key": "status", "value": "captured", "disabled": true, "description": "Filter by status: pending, authorized, captured, failed, voided, refunded" },
+                { "key": "payment_method", "value": "card", "disabled": true, "description": "Filter by method: card, mada, apple_pay" },
+                { "key": "from", "value": "2025-01-01T00:00:00Z", "disabled": true, "description": "ISO 8601 datetime" },
+                { "key": "to", "value": "2025-12-31T23:59:59Z", "disabled": true, "description": "ISO 8601 datetime" }
+              ]
+            },
+            "description": "List charges for the authenticated merchant. Filterable by status, payment_method, and date range."
+          }
+        },
+        {
+          "name": "Get Charge",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{secret_key}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/charges/{{charge_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "charges", "{{charge_id}}"]
+            },
+            "description": "Retrieve a single charge by ID."
+          }
+        },
+        {
+          "name": "Void Charge",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{secret_key}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/charges/{{charge_id}}/void",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "charges", "{{charge_id}}", "void"]
+            },
+            "description": "Void an authorized charge before capture. Invalid on captured or already voided charges (422)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Refunds",
+      "item": [
+        {
+          "name": "Create Refund",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('refund_id', pm.response.json().id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{secret_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 500,\n  \"reason\": \"requested_by_customer\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/charges/{{charge_id}}/refunds",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "charges", "{{charge_id}}", "refunds"]
+            },
+            "description": "Refund a captured charge. Full or partial. Reasons: `duplicate`, `fraudulent`, `requested_by_customer`."
+          }
+        },
+        {
+          "name": "List Refunds for Charge",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{secret_key}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/charges/{{charge_id}}/refunds",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "charges", "{{charge_id}}", "refunds"]
+            },
+            "description": "List all refunds for a specific charge."
+          }
+        },
+        {
+          "name": "Get Refund",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{secret_key}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/refunds/{{refund_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "refunds", "{{refund_id}}"]
+            },
+            "description": "Retrieve a single refund by ID."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Webhooks",
+      "item": [
+        {
+          "name": "List Webhook Endpoints",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{secret_key}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/me/webhook_endpoints",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "me", "webhook_endpoints"]
+            },
+            "description": "List all registered webhook endpoints for the merchant."
+          }
+        },
+        {
+          "name": "Register Webhook Endpoint",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  pm.collectionVariables.set('webhook_endpoint_id', body.webhook_endpoint.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{secret_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://merchant.example.com/hooks\",\n  \"events\": [\n    \"charge.captured\",\n    \"charge.failed\",\n    \"refund.succeeded\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/me/webhook_endpoints",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "me", "webhook_endpoints"]
+            },
+            "description": "Register a webhook endpoint. Returns a `webhook_secret` shown once — use it to verify `X-PayGate-Signature` on inbound events. Available events: `charge.pending`, `charge.authorized`, `charge.captured`, `charge.failed`, `charge.voided`, `refund.created`, `refund.succeeded`, `refund.failed`."
+          }
+        },
+        {
+          "name": "Update Webhook Endpoint",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{secret_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"active\": false,\n  \"events\": [\"charge.captured\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/me/webhook_endpoints/{{webhook_endpoint_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "me", "webhook_endpoints", "{{webhook_endpoint_id}}"]
+            },
+            "description": "Update a webhook endpoint's URL, events, or active status."
+          }
+        },
+        {
+          "name": "Delete Webhook Endpoint",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{secret_key}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/me/webhook_endpoints/{{webhook_endpoint_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "me", "webhook_endpoints", "{{webhook_endpoint_id}}"]
+            },
+            "description": "Remove a webhook endpoint."
+          }
+        },
+        {
+          "name": "Verify Webhook Signature",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{secret_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"endpoint_id\": \"{{webhook_endpoint_id}}\",\n  \"payload\": \"{\\\"event\\\":\\\"charge.captured\\\",\\\"data\\\":{\\\"id\\\":\\\"charge-uuid\\\"}}\",\n  \"signature\": \"sha256=abc123...\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/webhooks/verify",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "webhooks", "verify"]
+            },
+            "description": "Verify a `X-PayGate-Signature` value against a received payload. Returns 200 if valid, 400 if invalid."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Entity IDs",
+      "item": [
+        {
+          "name": "List Entity IDs",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{secret_key}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/me/entity_ids",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "me", "entity_ids"]
+            },
+            "description": "List all entity IDs registered by the merchant (used for HyperPay-style integrations)."
+          }
+        },
+        {
+          "name": "Create Entity ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('entity_id_id', pm.response.json().id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{secret_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"brand\": \"card\",\n  \"environment\": \"sandbox\",\n  \"entity_id\": \"8ac7a4ca12345678\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/me/entity_ids",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "me", "entity_ids"]
+            },
+            "description": "Register an entity ID for a payment brand. Brands: `card`, `mada`, `apple_pay`."
+          }
+        },
+        {
+          "name": "Delete Entity ID",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{secret_key}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/v1/me/entity_ids/{{entity_id_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "me", "entity_ids", "{{entity_id_id}}"]
+            },
+            "description": "Remove an entity ID."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Liveness",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            },
+            "description": "Basic liveness check. Returns `{\"status\":\"ok\"}`."
+          }
+        },
+        {
+          "name": "Readiness",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/health/ready",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "health", "ready"]
+            },
+            "description": "Readiness check. Verifies DB, Redis, and Sidekiq connectivity."
+          }
+        }
+      ]
+    }
+  ]
+}
