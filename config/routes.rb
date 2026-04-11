@@ -1,4 +1,6 @@
 Rails.application.routes.draw do
+  mount Rswag::Api::Engine => "/api-docs"
+
   # Health — infrastructure endpoints, no namespace
   get "/health", to: "health#liveness"
   get "/v1/health/ready", to: "health#readiness"

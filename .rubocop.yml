@@ -84,3 +84,23 @@ RSpec/LetSetup:
 
 RSpec/MultipleMemoizedHelpers:
   Max: 8
+
+# ── rswag swagger specs ───────────────────────────────────────────────────────
+# rswag DSL uses path/verb blocks that look like empty example groups,
+# declares headers with CapitalCase names (Authorization, Idempotency-Key),
+# and requires multiple before hooks across nested response blocks.
+RSpec/EmptyExampleGroup:
+  Exclude:
+    - "spec/requests/swagger/**/*"
+
+RSpec/VariableName:
+  Exclude:
+    - "spec/requests/swagger/**/*"
+
+RSpec/ScatteredSetup:
+  Exclude:
+    - "spec/requests/swagger/**/*"
+
+RSpec/EmptyLineAfterHook:
+  Exclude:
+    - "spec/requests/swagger/**/*"
