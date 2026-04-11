@@ -61,8 +61,11 @@ class ChargeService
       charge.transition_to!("authorized")
       charge.transition_to!("captured")
       LedgerService.record_captured_charge(charge: charge)
+      WebhookDispatcherService.dispatch(event_type: "charge.captured", charge: charge.reload, refund: nil, merchant: @merchant)
     else
       charge.transition_to!(adapter_result.status)
+      event = "charge.#{adapter_result.status}"
+      WebhookDispatcherService.dispatch(event_type: event, charge: charge.reload, refund: nil, merchant: @merchant)
     end
 
     idempotency.store!(charge.id)

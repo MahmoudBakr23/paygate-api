@@ -27,6 +27,7 @@ class RefundService
       reason: @reason,
       status: "pending"
     )
+    WebhookDispatcherService.dispatch(event_type: "refund.created", charge: @charge, refund: refund, merchant: @merchant)
 
     adapter_result = adapter.refund(
       provider_charge_id: @charge.provider_charge_id,
@@ -89,5 +90,6 @@ class RefundService
     refunded_amount = @charge.refunds.where(status: "succeeded").sum(:amount)
     @charge.transition_to!("refunded") if refunded_amount >= @charge.amount
     LedgerService.record_refund(charge: @charge, refund: refund)
+    WebhookDispatcherService.dispatch(event_type: "refund.succeeded", charge: @charge, refund: refund, merchant: @merchant)
   end
 end
