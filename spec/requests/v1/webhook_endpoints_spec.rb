@@ -74,7 +74,7 @@ RSpec.describe "Webhook Endpoints (/v1/me/webhook_endpoints)" do
             headers: headers, as: :json
 
       expect(response).to have_http_status(:ok)
-      expect(json_response[:active]).to eq(false)
+      expect(json_response[:active]).to be(false)
     end
 
     it "returns 404 for another merchant's endpoint" do
