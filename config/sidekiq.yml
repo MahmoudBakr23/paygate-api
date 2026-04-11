@@ -3,3 +3,12 @@
   - [webhook_delivery, 5]
   - [default, 3]
   - [reconciliation, 1]
+
+# Scheduled jobs (Sidekiq cron — requires sidekiq-cron or sidekiq-scheduler gem,
+# added in a later phase when more cron jobs exist). For now the job is enqueued
+# manually or via a deploy hook. Documented here for operational clarity.
+#
+# :schedule:
+#   partition_manager:
+#     cron: "5 0 1 * *"   # 00:05 UTC on the 1st of every month
+#     class: PartitionManagerJob

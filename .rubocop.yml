@@ -81,3 +81,6 @@ RSpec/IndexedLet:
 
 RSpec/LetSetup:
   Enabled: false
+
+RSpec/MultipleMemoizedHelpers:
+  Max: 8

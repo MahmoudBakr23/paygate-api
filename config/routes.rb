@@ -17,13 +17,13 @@ Rails.application.routes.draw do
     end
 
     # Charges (Phase 2)
-    # resources :charges, only: %i[create show index] do
-    #   member do
-    #     post :capture
-    #     post :void
-    #   end
-    #   resources :refunds, only: %i[create index]
-    # end
+    resources :charges, only: %i[create show index] do
+      member do
+        post :capture
+        post :void
+      end
+      resources :refunds, only: %i[create index]
+    end
 
     # Webhooks (Phase 4)
     # post "/webhooks/verify", to: "webhooks#verify"
