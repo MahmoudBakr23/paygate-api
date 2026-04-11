@@ -10,10 +10,6 @@ module V1
 
         render json: {
           merchant: MerchantBlueprint.render_as_hash(result.merchant),
-          api_keys: {
-            public_key: result.api_key_result.public_key,
-            secret_key: result.api_key_result.secret_key
-          },
           token: result.token
         }, status: :created
       rescue ActiveRecord::RecordInvalid => e

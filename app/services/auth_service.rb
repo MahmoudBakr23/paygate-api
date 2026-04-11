@@ -5,7 +5,7 @@ class AuthService
   AuthenticationError = Class.new(StandardError)
   InvalidTokenError = Class.new(StandardError)
 
-  RegisterResult = Struct.new(:merchant, :api_key_result, :token, keyword_init: true)
+  RegisterResult = Struct.new(:merchant, :token, keyword_init: true)
   LoginResult = Struct.new(:merchant, :token, keyword_init: true)
   VerifyResult = Struct.new(:merchant, :jti, :exp, keyword_init: true)
 
@@ -13,10 +13,9 @@ class AuthService
     merchant = Merchant.new(name: name, email: email, password: password)
     raise ActiveRecord::RecordInvalid.new(merchant) unless merchant.save
 
-    api_key_result = ApiKeyService.new(merchant: merchant).generate_pair(environment: "sandbox")
     token = issue_token(merchant)
 
-    RegisterResult.new(merchant: merchant, api_key_result: api_key_result, token: token)
+    RegisterResult.new(merchant: merchant, token: token)
   end
 
   def login(email:, password:)
