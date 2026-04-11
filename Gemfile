@@ -12,6 +12,7 @@ gem "jwt", "~> 3.1"
 gem "blueprinter"
 gem "lograge"
 gem "rswag-api"
+gem "rswag-ui"
 gem "stripe", "~> 13.0"
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 gem "bootsnap", require: false
