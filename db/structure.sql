@@ -160,6 +160,40 @@ CREATE TABLE public.schema_migrations (
 
 
 --
+-- Name: webhook_deliveries; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.webhook_deliveries (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    webhook_endpoint_id uuid NOT NULL,
+    charge_id character varying,
+    event_type character varying NOT NULL,
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    status character varying DEFAULT 'pending'::character varying NOT NULL,
+    http_status integer,
+    attempts integer DEFAULT 0 NOT NULL,
+    next_retry_at timestamp without time zone,
+    delivered_at timestamp without time zone,
+    created_at timestamp without time zone NOT NULL
+);
+
+
+--
+-- Name: webhook_endpoints; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.webhook_endpoints (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    merchant_id uuid NOT NULL,
+    url character varying NOT NULL,
+    events character varying[] DEFAULT '{charge.captured,charge.failed,refund.created}'::character varying[],
+    active boolean DEFAULT true NOT NULL,
+    webhook_secret character varying NOT NULL,
+    created_at timestamp without time zone NOT NULL
+);
+
+
+--
 -- Name: charges_default; Type: TABLE ATTACH; Schema: public; Owner: -
 --
 
@@ -228,6 +262,22 @@ ALTER TABLE ONLY public.refunds
 
 ALTER TABLE ONLY public.schema_migrations
     ADD CONSTRAINT schema_migrations_pkey PRIMARY KEY (version);
+
+
+--
+-- Name: webhook_deliveries webhook_deliveries_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.webhook_deliveries
+    ADD CONSTRAINT webhook_deliveries_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: webhook_endpoints webhook_endpoints_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.webhook_endpoints
+    ADD CONSTRAINT webhook_endpoints_pkey PRIMARY KEY (id);
 
 
 --
@@ -378,6 +428,34 @@ CREATE INDEX index_refunds_on_status ON public.refunds USING btree (status);
 
 
 --
+-- Name: index_webhook_deliveries_on_charge_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_webhook_deliveries_on_charge_id ON public.webhook_deliveries USING btree (charge_id);
+
+
+--
+-- Name: index_webhook_deliveries_on_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_webhook_deliveries_on_status ON public.webhook_deliveries USING btree (status);
+
+
+--
+-- Name: index_webhook_deliveries_on_webhook_endpoint_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_webhook_deliveries_on_webhook_endpoint_id ON public.webhook_deliveries USING btree (webhook_endpoint_id);
+
+
+--
+-- Name: index_webhook_endpoints_on_merchant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_webhook_endpoints_on_merchant_id ON public.webhook_endpoints USING btree (merchant_id);
+
+
+--
 -- Name: charges_default_created_at_idx; Type: INDEX ATTACH; Schema: public; Owner: -
 --
 
@@ -444,6 +522,22 @@ ALTER TABLE ONLY public.api_keys
 
 
 --
+-- Name: webhook_deliveries fk_rails_392378d371; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.webhook_deliveries
+    ADD CONSTRAINT fk_rails_392378d371 FOREIGN KEY (webhook_endpoint_id) REFERENCES public.webhook_endpoints(id);
+
+
+--
+-- Name: webhook_endpoints fk_rails_46127e0e95; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.webhook_endpoints
+    ADD CONSTRAINT fk_rails_46127e0e95 FOREIGN KEY (merchant_id) REFERENCES public.merchants(id);
+
+
+--
 -- Name: ledger_entries fk_rails_9d29e663c8; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -458,6 +552,8 @@ ALTER TABLE ONLY public.ledger_entries
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260411071121'),
+('20260411071116'),
 ('20260411065858'),
 ('20260411065857'),
 ('20260410234641'),

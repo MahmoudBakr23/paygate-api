@@ -20,6 +20,7 @@ class VoidService
     if adapter_result.status == "voided"
       @charge.transition_to!("voided")
       LedgerService.record_void(charge: @charge)
+      WebhookDispatcherService.dispatch(event_type: "charge.voided", charge: @charge.reload, refund: nil, merchant: @merchant)
     else
       raise PaygateError.new(
         message: adapter_result.failure_message || "Void failed at provider",

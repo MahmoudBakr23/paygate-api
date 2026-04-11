@@ -3,6 +3,10 @@ Rails.application.routes.draw do
   get "/health", to: "health#liveness"
   get "/v1/health/ready", to: "health#readiness"
 
+  # Inbound provider webhooks — no auth (HMAC verified inside job) (Phase 4)
+  post "/webhooks/stripe",   to: "webhooks#stripe"
+  post "/webhooks/checkout", to: "webhooks#checkout"
+
   namespace :v1 do
     # Auth (Phase 1)
     namespace :auth do
@@ -28,8 +32,8 @@ Rails.application.routes.draw do
     # Standalone refund lookup (Phase 3)
     resources :refunds, only: %i[show]
 
-    # Webhooks (Phase 4)
-    # post "/webhooks/verify", to: "webhooks#verify"
+    # Webhooks — merchant signature verification (Phase 4)
+    post "/webhooks/verify", to: "webhooks#verify"
 
     # Entity IDs (Phase 5)
     # resources :entity_ids, only: %i[index create destroy]
