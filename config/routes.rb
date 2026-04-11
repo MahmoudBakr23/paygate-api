@@ -11,6 +11,9 @@ Rails.application.routes.draw do
   post "/webhooks/checkout", to: "webhooks#checkout"
 
   namespace :v1 do
+    # Public SDK config — no auth (Phase 8)
+    get "/public/config", to: "public#sdk_config"
+
     # Auth (Phase 1)
     namespace :auth do
       post :register, to: "registrations#create"
