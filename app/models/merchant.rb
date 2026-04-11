@@ -5,6 +5,7 @@ class Merchant < ApplicationRecord
   has_many :refunds, dependent: :destroy
   has_many :ledger_entries, dependent: :destroy
   has_many :webhook_endpoints, dependent: :destroy
+  has_many :entity_ids, dependent: :destroy
 
   ENVIRONMENTS = %w[sandbox live].freeze
   PAYMENT_METHODS = %w[card mada apple_pay].freeze

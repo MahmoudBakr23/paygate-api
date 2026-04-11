@@ -99,6 +99,20 @@ CREATE TABLE public.charges_default (
 
 
 --
+-- Name: entity_ids; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.entity_ids (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    merchant_id uuid NOT NULL,
+    brand character varying NOT NULL,
+    environment character varying NOT NULL,
+    entity_id character varying NOT NULL,
+    created_at timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+--
 -- Name: ledger_entries; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -230,6 +244,14 @@ ALTER TABLE ONLY public.charges
 
 ALTER TABLE ONLY public.charges_default
     ADD CONSTRAINT charges_default_pkey PRIMARY KEY (id, created_at);
+
+
+--
+-- Name: entity_ids entity_ids_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entity_ids
+    ADD CONSTRAINT entity_ids_pkey PRIMARY KEY (id);
 
 
 --
@@ -379,6 +401,20 @@ CREATE UNIQUE INDEX index_api_keys_on_public_key ON public.api_keys USING btree 
 
 
 --
+-- Name: index_entity_ids_on_merchant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_entity_ids_on_merchant_id ON public.entity_ids USING btree (merchant_id);
+
+
+--
+-- Name: index_entity_ids_on_merchant_id_and_brand_and_environment; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_entity_ids_on_merchant_id_and_brand_and_environment ON public.entity_ids USING btree (merchant_id, brand, environment);
+
+
+--
 -- Name: index_ledger_entries_on_charge_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -506,6 +542,14 @@ ALTER TABLE public.charges
 
 
 --
+-- Name: entity_ids fk_rails_030609164f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entity_ids
+    ADD CONSTRAINT fk_rails_030609164f FOREIGN KEY (merchant_id) REFERENCES public.merchants(id);
+
+
+--
 -- Name: refunds fk_rails_0f0ec6083c; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -552,6 +596,7 @@ ALTER TABLE ONLY public.ledger_entries
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260411073425'),
 ('20260411071121'),
 ('20260411071116'),
 ('20260411065858'),
