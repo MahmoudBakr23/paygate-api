@@ -133,6 +133,9 @@ GEM
       rdoc (>= 4.0.0)
       reline (>= 0.4.2)
     json (2.19.3)
+    json-schema (6.2.0)
+      addressable (~> 2.8)
+      bigdecimal (>= 3.1, < 5)
     jwt (3.1.2)
       base64
     kamal (2.11.0)
@@ -298,6 +301,14 @@ GEM
     rspec-support (3.13.7)
     rspec_junit_formatter (0.6.0)
       rspec-core (>= 2, < 4, != 2.12.0)
+    rswag-api (2.17.0)
+      activesupport (>= 5.2, < 8.2)
+      railties (>= 5.2, < 8.2)
+    rswag-specs (2.17.0)
+      activesupport (>= 5.2, < 8.2)
+      json-schema (>= 2.2, < 7.0)
+      railties (>= 5.2, < 8.2)
+      rspec-core (>= 2.14)
     rubocop (1.86.1)
       json (~> 2.3)
       language_server-protocol (~> 3.17.0.2)
@@ -406,6 +417,8 @@ DEPENDENCIES
   redis (~> 5.0)
   rspec-rails (~> 8.0)
   rspec_junit_formatter
+  rswag-api
+  rswag-specs
   rubocop-performance
   rubocop-rails-omakase
   rubocop-rspec

@@ -1,0 +1,1379 @@
+---
+openapi: 3.0.1
+info:
+  title: Paygate API
+  version: v1
+  description: |
+    Paygate is a payment gateway API that abstracts Stripe (Visa/MC/Apple Pay)
+    and Checkout.com (Mada) behind a unified interface. All endpoints are prefixed
+    with `/v1`. Financial data is always live — never cached.
+
+    **Authentication:** Use your secret API key (`sk_test_xxx`) as a Bearer token,
+    or a JWT session token returned by `/v1/auth/login`.
+
+    **Sandbox keys** (`sk_test_xxx`) process real transactions against provider
+    sandboxes. **Live keys** (`sk_live_xxx`) return 403 — live mode is architecture-
+    complete but not activated in this portfolio instance.
+servers:
+- url: https://paygate-api.fly.dev
+  description: Sandbox (Fly.io)
+- url: http://localhost:3000
+  description: Local development
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: Secret API key (`sk_test_xxx`) or JWT session token
+  schemas:
+    Error:
+      type: object
+      required:
+      - error
+      properties:
+        error:
+          type: object
+          required:
+          - code
+          - message
+          properties:
+            code:
+              type: string
+              example: unauthorized
+            message:
+              type: string
+              example: Invalid or missing API key
+    Merchant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: Acme Corp
+        email:
+          type: string
+          format: email
+          example: acme@example.com
+        environment:
+          type: string
+          enum:
+          - sandbox
+          - live
+          example: sandbox
+        enabled_payment_methods:
+          type: array
+          items:
+            type: string
+            enum:
+            - card
+            - mada
+            - apple_pay
+          example:
+          - card
+          - mada
+          - apple_pay
+        webhook_url:
+          type: string
+          nullable: true
+          example: https://merchant.example.com/hooks
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ApiKey:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        environment:
+          type: string
+          enum:
+          - sandbox
+          - live
+        public_key:
+          type: string
+          example: pk_test_abc123...
+        last_used_at:
+          type: string
+          format: date-time
+          nullable: true
+        revoked_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+    ApiKeyCreated:
+      type: object
+      description: Returned once at creation — secret_key is never shown again
+      properties:
+        public_key:
+          type: string
+          example: pk_test_abc123...
+        secret_key:
+          type: string
+          example: sk_test_xyz789...
+        api_key:
+          "$ref": "#/components/schemas/ApiKey"
+    Charge:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        merchant_id:
+          type: string
+          format: uuid
+        amount:
+          type: integer
+          description: Smallest currency unit (halalas/cents)
+          example: 1000
+        currency:
+          type: string
+          example: SAR
+        payment_method:
+          type: string
+          enum:
+          - card
+          - mada
+          - apple_pay
+          example: card
+        status:
+          type: string
+          enum:
+          - pending
+          - authorized
+          - captured
+          - failed
+          - voided
+          - refunded
+          example: captured
+        provider:
+          type: string
+          enum:
+          - stripe
+          - checkout
+          example: stripe
+        provider_charge_id:
+          type: string
+          nullable: true
+          example: pi_3abc...
+        idempotency_key:
+          type: string
+          nullable: true
+          example: 550e8400-e29b-41d4-a716-446655440000
+        metadata:
+          type: object
+          additionalProperties: true
+          example:
+            order_id: ORD-42
+        failure_code:
+          type: string
+          nullable: true
+        failure_message:
+          type: string
+          nullable: true
+        environment:
+          type: string
+          enum:
+          - sandbox
+          - live
+        captured_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    Refund:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        charge_id:
+          type: string
+          format: uuid
+        merchant_id:
+          type: string
+          format: uuid
+        amount:
+          type: integer
+          example: 500
+        reason:
+          type: string
+          nullable: true
+          enum:
+          - duplicate
+          - fraudulent
+          - requested_by_customer
+          example: requested_by_customer
+        status:
+          type: string
+          enum:
+          - pending
+          - succeeded
+          - failed
+          example: succeeded
+        provider_refund_id:
+          type: string
+          nullable: true
+          example: re_abc...
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    WebhookEndpoint:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        merchant_id:
+          type: string
+          format: uuid
+        url:
+          type: string
+          format: uri
+          example: https://merchant.example.com/hooks
+        events:
+          type: array
+          items:
+            type: string
+          example:
+          - charge.captured
+          - charge.failed
+        active:
+          type: boolean
+          example: true
+        created_at:
+          type: string
+          format: date-time
+    WebhookEndpointCreated:
+      type: object
+      description: Returned once at creation — webhook_secret is never shown again
+      properties:
+        webhook_endpoint:
+          "$ref": "#/components/schemas/WebhookEndpoint"
+        webhook_secret:
+          type: string
+          example: whsec_abc123...
+    EntityId:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        merchant_id:
+          type: string
+          format: uuid
+        brand:
+          type: string
+          enum:
+          - card
+          - mada
+          - apple_pay
+          example: card
+        environment:
+          type: string
+          enum:
+          - sandbox
+          - live
+          example: sandbox
+        entity_id:
+          type: string
+          example: 8ac7a4ca12345678
+        created_at:
+          type: string
+          format: date-time
+    DashboardStats:
+      type: object
+      properties:
+        total_charges:
+          type: integer
+          example: 42
+        captured_count:
+          type: integer
+          example: 35
+        failed_count:
+          type: integer
+          example: 5
+        refunded_count:
+          type: integer
+          example: 2
+        total_volume:
+          type: integer
+          description: Captured volume in smallest currency unit
+          example: 175000
+        currency:
+          type: string
+          example: SAR
+        success_rate:
+          type: number
+          format: float
+          example: 83.33
+        volume_by_method:
+          type: object
+          properties:
+            card:
+              type: integer
+              example: 120000
+            mada:
+              type: integer
+              example: 55000
+            apple_pay:
+              type: integer
+              example: 0
+    RegisterRequest:
+      type: object
+      required:
+      - name
+      - email
+      - password
+      properties:
+        name:
+          type: string
+          example: Acme Corp
+        email:
+          type: string
+          format: email
+          example: acme@example.com
+        password:
+          type: string
+          example: Password1!
+    LoginRequest:
+      type: object
+      required:
+      - email
+      - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: acme@example.com
+        password:
+          type: string
+          example: Password1!
+    CreateChargeRequest:
+      type: object
+      required:
+      - amount
+      - currency
+      - payment_method
+      - token
+      properties:
+        amount:
+          type: integer
+          description: In smallest currency unit
+          example: 1000
+        currency:
+          type: string
+          example: SAR
+        payment_method:
+          type: string
+          enum:
+          - card
+          - mada
+          - apple_pay
+          example: card
+        token:
+          type: string
+          description: Provider-issued one-time token
+          example: tok_visa
+        metadata:
+          type: object
+          additionalProperties: true
+    CreateRefundRequest:
+      type: object
+      required:
+      - amount
+      properties:
+        amount:
+          type: integer
+          description: In smallest currency unit
+          example: 500
+        reason:
+          type: string
+          enum:
+          - duplicate
+          - fraudulent
+          - requested_by_customer
+          example: requested_by_customer
+    UpdateMerchantRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Acme Corp Updated
+        webhook_url:
+          type: string
+          format: uri
+          example: https://merchant.example.com/hooks
+        enabled_payment_methods:
+          type: array
+          items:
+            type: string
+            enum:
+            - card
+            - mada
+            - apple_pay
+    CreateApiKeyRequest:
+      type: object
+      properties:
+        environment:
+          type: string
+          enum:
+          - sandbox
+          - live
+          default: sandbox
+    CreateWebhookEndpointRequest:
+      type: object
+      required:
+      - url
+      - events
+      properties:
+        url:
+          type: string
+          format: uri
+          example: https://merchant.example.com/hooks
+        events:
+          type: array
+          items:
+            type: string
+            enum:
+            - charge.pending
+            - charge.authorized
+            - charge.captured
+            - charge.failed
+            - charge.voided
+            - refund.created
+            - refund.succeeded
+            - refund.failed
+          example:
+          - charge.captured
+          - charge.failed
+    UpdateWebhookEndpointRequest:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+        events:
+          type: array
+          items:
+            type: string
+        active:
+          type: boolean
+    CreateEntityIdRequest:
+      type: object
+      required:
+      - brand
+      - environment
+      - entity_id
+      properties:
+        brand:
+          type: string
+          enum:
+          - card
+          - mada
+          - apple_pay
+          example: card
+        environment:
+          type: string
+          enum:
+          - sandbox
+          - live
+          example: sandbox
+        entity_id:
+          type: string
+          example: 8ac7a4ca12345678
+    VerifyWebhookRequest:
+      type: object
+      required:
+      - endpoint_id
+      - payload
+      - signature
+      properties:
+        endpoint_id:
+          type: string
+          format: uuid
+        payload:
+          type: string
+          description: Raw JSON string that was received
+        signature:
+          type: string
+          description: X-PayGate-Signature header value
+          example: sha256=abc123...
+security:
+- BearerAuth: []
+paths:
+  "/v1/me/api_keys":
+    get:
+      summary: List active API keys
+      tags:
+      - API Keys
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+        required: true
+      responses:
+        '200':
+          description: list of active API keys
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/ApiKey"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+    post:
+      summary: Generate a new API key pair
+      tags:
+      - API Keys
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+        required: true
+      responses:
+        '201':
+          description: key pair created — secret shown once
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ApiKeyCreated"
+        '422':
+          description: invalid environment
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/CreateApiKeyRequest"
+  "/v1/me/api_keys/{id}":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    delete:
+      summary: Revoke an API key
+      tags:
+      - API Keys
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+        required: true
+      responses:
+        '200':
+          description: key revoked
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ApiKey"
+        '404':
+          description: key not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/v1/auth/register":
+    post:
+      summary: Register a new merchant
+      tags:
+      - Authentication
+      security: []
+      parameters: []
+      responses:
+        '201':
+          description: merchant created with sandbox key pair
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: JWT session token
+                  merchant:
+                    "$ref": "#/components/schemas/Merchant"
+                  api_keys:
+                    type: object
+                    properties:
+                      public_key:
+                        type: string
+                        example: pk_test_abc...
+                      secret_key:
+                        type: string
+                        description: Shown once — store immediately
+                        example: sk_test_xyz...
+        '422':
+          description: validation error
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/RegisterRequest"
+        required: true
+  "/v1/auth/login":
+    post:
+      summary: Login and obtain a JWT
+      tags:
+      - Authentication
+      security: []
+      parameters: []
+      responses:
+        '200':
+          description: login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  merchant:
+                    "$ref": "#/components/schemas/Merchant"
+        '401':
+          description: invalid credentials
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/LoginRequest"
+        required: true
+  "/v1/auth/logout":
+    delete:
+      summary: Revoke the current session
+      tags:
+      - Authentication
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+        required: true
+      responses:
+        '200':
+          description: logged out successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '401':
+          description: missing or revoked token
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/v1/charges":
+    post:
+      summary: Create a charge
+      tags:
+      - Charges
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+        required: true
+      - name: Idempotency-Key
+        in: header
+        schema:
+          type: string
+          format: uuid
+        required: true
+        description: Unique key per charge attempt. Duplicate keys replay the original
+          response.
+      responses:
+        '201':
+          description: charge created
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Charge"
+        '200':
+          description: idempotency replay — original response returned
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Charge"
+        '401':
+          description: missing or invalid API key
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '403':
+          description: live mode is not enabled
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '422':
+          description: missing Idempotency-Key header
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/CreateChargeRequest"
+        required: true
+    get:
+      summary: List charges
+      tags:
+      - Charges
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+        required: true
+      - name: status
+        in: query
+        schema:
+          type: string
+          enum:
+          - pending
+          - authorized
+          - captured
+          - failed
+          - voided
+          - refunded
+        required: false
+      - name: payment_method
+        in: query
+        schema:
+          type: string
+          enum:
+          - card
+          - mada
+          - apple_pay
+        required: false
+      - name: from
+        in: query
+        schema:
+          type: string
+          format: date-time
+        required: false
+      - name: to
+        in: query
+        schema:
+          type: string
+          format: date-time
+        required: false
+      responses:
+        '200':
+          description: list of charges
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/Charge"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/v1/charges/{id}":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    get:
+      summary: Retrieve a charge
+      tags:
+      - Charges
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+        required: true
+      responses:
+        '200':
+          description: charge found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Charge"
+        '404':
+          description: charge not found or belongs to another merchant
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/v1/charges/{id}/void":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    post:
+      summary: Void an authorized charge
+      tags:
+      - Charges
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+        required: true
+      responses:
+        '200':
+          description: charge voided
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Charge"
+        '422':
+          description: charge status prevents void
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '404':
+          description: charge not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/v1/me/dashboard":
+    get:
+      summary: Retrieve aggregated dashboard stats
+      tags:
+      - Dashboard
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+        required: true
+      responses:
+        '200':
+          description: dashboard statistics
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/DashboardStats"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/v1/me/entity_ids":
+    get:
+      summary: List entity IDs
+      tags:
+      - Entity IDs
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+        required: true
+      responses:
+        '200':
+          description: list of entity IDs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/EntityId"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+    post:
+      summary: Create an entity ID
+      tags:
+      - Entity IDs
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+        required: true
+      responses:
+        '201':
+          description: entity ID created
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EntityId"
+        '422':
+          description: invalid brand or duplicate entry
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/CreateEntityIdRequest"
+        required: true
+  "/v1/me/entity_ids/{id}":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    delete:
+      summary: Remove an entity ID
+      tags:
+      - Entity IDs
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+        required: true
+      responses:
+        '200':
+          description: entity ID removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '404':
+          description: entity ID not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/v1/me":
+    get:
+      summary: Retrieve merchant profile
+      tags:
+      - Merchant
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+        required: true
+      responses:
+        '200':
+          description: merchant profile
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Merchant"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+    patch:
+      summary: Update merchant profile
+      tags:
+      - Merchant
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+        required: true
+      responses:
+        '200':
+          description: merchant updated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Merchant"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/UpdateMerchantRequest"
+        required: true
+  "/v1/charges/{charge_id}/refunds":
+    parameters:
+    - name: charge_id
+      in: path
+      required: true
+      schema:
+        type: string
+    post:
+      summary: Create a refund
+      tags:
+      - Refunds
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+        required: true
+      responses:
+        '201':
+          description: refund created
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Refund"
+        '422':
+          description: amount exceeds refundable balance
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '404':
+          description: charge not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/CreateRefundRequest"
+        required: true
+    get:
+      summary: List refunds for a charge
+      tags:
+      - Refunds
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+        required: true
+      responses:
+        '200':
+          description: list of refunds
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/Refund"
+        '404':
+          description: charge not found or belongs to another merchant
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/v1/refunds/{id}":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    get:
+      summary: Retrieve a refund
+      tags:
+      - Refunds
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+        required: true
+      responses:
+        '200':
+          description: refund found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Refund"
+        '404':
+          description: refund not found or belongs to another merchant
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/v1/me/webhook_endpoints":
+    get:
+      summary: List webhook endpoints
+      tags:
+      - Webhooks
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+        required: true
+      responses:
+        '200':
+          description: list of webhook endpoints
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/WebhookEndpoint"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+    post:
+      summary: Register a webhook endpoint
+      tags:
+      - Webhooks
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+        required: true
+      responses:
+        '201':
+          description: endpoint created — webhook_secret shown once
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/WebhookEndpointCreated"
+        '422':
+          description: invalid URL or event type
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/CreateWebhookEndpointRequest"
+        required: true
+  "/v1/me/webhook_endpoints/{id}":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    patch:
+      summary: Update a webhook endpoint
+      tags:
+      - Webhooks
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+        required: true
+      responses:
+        '200':
+          description: endpoint updated
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/WebhookEndpoint"
+        '404':
+          description: endpoint not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/UpdateWebhookEndpointRequest"
+        required: true
+    delete:
+      summary: Remove a webhook endpoint
+      tags:
+      - Webhooks
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+        required: true
+      responses:
+        '200':
+          description: endpoint removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '404':
+          description: endpoint not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/v1/webhooks/verify":
+    post:
+      summary: Verify a webhook signature
+      tags:
+      - Webhooks
+      parameters:
+      - name: Authorization
+        in: header
+        schema:
+          type: string
+        required: true
+      responses:
+        '200':
+          description: signature verification result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - valid
+                properties:
+                  valid:
+                    type: boolean
+                  message:
+                    type: string
+                    nullable: true
+        '404':
+          description: endpoint not found or belongs to another merchant
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/VerifyWebhookRequest"
+        required: true

@@ -11,6 +11,7 @@ gem "sidekiq", "~> 8.1"
 gem "jwt", "~> 3.1"
 gem "blueprinter"
 gem "lograge"
+gem "rswag-api"
 gem "stripe", "~> 13.0"
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 gem "bootsnap", require: false
@@ -21,6 +22,7 @@ group :development, :test do
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
   gem "dotenv-rails"
   gem "rspec-rails", "~> 8.0"
+  gem "rswag-specs"
   gem "factory_bot_rails"
   gem "faker"
   gem "shoulda-matchers"
