@@ -5,6 +5,7 @@ class Charge < ApplicationRecord
   self.primary_key = "id"
 
   belongs_to :merchant
+  has_many :refunds, foreign_key: :charge_id, primary_key: :id, dependent: :destroy
 
   STATUSES = %w[pending authorized captured failed voided refunded].freeze
   PAYMENT_METHODS = %w[card mada apple_pay].freeze

@@ -2,6 +2,8 @@ class Merchant < ApplicationRecord
   has_secure_password
   has_many :api_keys, dependent: :destroy
   has_many :charges, dependent: :destroy
+  has_many :refunds, dependent: :destroy
+  has_many :ledger_entries, dependent: :destroy
 
   ENVIRONMENTS = %w[sandbox live].freeze
   PAYMENT_METHODS = %w[card mada apple_pay].freeze

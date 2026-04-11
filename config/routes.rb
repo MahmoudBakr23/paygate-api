@@ -16,7 +16,7 @@ Rails.application.routes.draw do
       resources :api_keys, only: %i[index create destroy]
     end
 
-    # Charges (Phase 2)
+    # Charges (Phase 2) + Refunds/Voids (Phase 3)
     resources :charges, only: %i[create show index] do
       member do
         post :capture
@@ -24,6 +24,9 @@ Rails.application.routes.draw do
       end
       resources :refunds, only: %i[create index]
     end
+
+    # Standalone refund lookup (Phase 3)
+    resources :refunds, only: %i[show]
 
     # Webhooks (Phase 4)
     # post "/webhooks/verify", to: "webhooks#verify"

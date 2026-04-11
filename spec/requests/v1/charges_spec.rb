@@ -148,6 +148,53 @@ RSpec.describe "V1::Charges", type: :request do
     end
   end
 
+  describe "POST /v1/charges/:id/void" do
+    let(:authorized_charge) { create(:charge, :authorized, merchant: merchant) }
+    let(:void_service_double) { instance_double(VoidService) }
+
+    before do
+      allow(VoidService).to receive(:new).and_return(void_service_double)
+      allow(void_service_double).to receive(:call).and_return(
+        VoidService::Result.new(charge: build_stubbed(:charge, :voided, merchant: merchant))
+      )
+    end
+
+    it "returns 200 with the voided charge JSON" do
+      post "/v1/charges/#{authorized_charge.id}/void", headers: headers
+
+      expect(response).to have_http_status(:ok)
+      expect(json_response[:status]).to eq("voided")
+    end
+
+    it "returns 401 without Authorization header" do
+      post "/v1/charges/#{authorized_charge.id}/void",
+           headers: headers.except("Authorization")
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it "returns 422 when charge cannot be voided" do
+      allow(void_service_double).to receive(:call).and_raise(
+        PaygateError.new(
+          message: "Only authorized charges can be voided",
+          code: "invalid_charge_status",
+          status: :unprocessable_content
+        )
+      )
+
+      post "/v1/charges/#{authorized_charge.id}/void", headers: headers
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(json_response[:error][:code]).to eq("invalid_charge_status")
+    end
+
+    it "returns 404 when charge not found" do
+      post "/v1/charges/#{SecureRandom.uuid}/void", headers: headers
+
+      expect(response).to have_http_status(:not_found)
+    end
+  end
+
   private
 
   def build_stubbed_charge(merchant:)

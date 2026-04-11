@@ -60,6 +60,7 @@ class ChargeService
     if adapter_result.status == "captured"
       charge.transition_to!("authorized")
       charge.transition_to!("captured")
+      LedgerService.record_captured_charge(charge: charge)
     else
       charge.transition_to!(adapter_result.status)
     end

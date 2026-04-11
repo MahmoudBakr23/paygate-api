@@ -28,6 +28,21 @@ module V1
       render_error(status: :not_found, code: "not_found", message: "Charge not found")
     end
 
+    def void
+      charge = current_merchant.charges.find_by!(id: params[:id])
+
+      result = VoidService.new(
+        merchant: current_merchant,
+        charge: charge
+      ).call
+
+      render json: ChargeBlueprint.render(result.charge)
+    rescue ActiveRecord::RecordNotFound
+      render_error(status: :not_found, code: "not_found", message: "Charge not found")
+    rescue PaygateError => e
+      render_error(status: e.status, code: e.code, message: e.message)
+    end
+
     def index
       charges = current_merchant.charges
                                 .for_environment(current_merchant.environment)
