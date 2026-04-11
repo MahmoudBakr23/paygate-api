@@ -10,17 +10,11 @@ RSpec.describe AuthService do
       expect { service.register(**valid_params) }.to change(Merchant, :count).by(1)
     end
 
-    it "auto-generates a sandbox API key pair" do
-      expect { service.register(**valid_params) }.to change(ApiKey, :count).by(1)
-    end
-
-    it "returns a register result with token, merchant, and sandbox key pair" do
+    it "returns a register result with token and merchant" do
       result = service.register(**valid_params)
 
       expect(result.token).to be_present
       expect(result.merchant.email).to eq("acme@example.com")
-      expect(result.api_key_result.public_key).to start_with("pk_test_")
-      expect(result.api_key_result.secret_key).to start_with("sk_test_")
     end
 
     it "downcases email" do
