@@ -1,7 +1,6 @@
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
--- transaction_timeout removed: PG 17.4+ only; local server is PG 14
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -100,6 +99,23 @@ CREATE TABLE public.charges_default (
 
 
 --
+-- Name: ledger_entries; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ledger_entries (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    merchant_id uuid NOT NULL,
+    charge_id uuid,
+    refund_id uuid,
+    entry_type character varying NOT NULL,
+    amount integer NOT NULL,
+    currency character varying NOT NULL,
+    description character varying,
+    created_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
 -- Name: merchants; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -112,6 +128,23 @@ CREATE TABLE public.merchants (
     enabled_payment_methods character varying[] DEFAULT '{card,mada,apple_pay}'::character varying[],
     webhook_url character varying,
     webhook_secret character varying,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: refunds; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.refunds (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    charge_id uuid NOT NULL,
+    merchant_id uuid NOT NULL,
+    amount integer NOT NULL,
+    reason character varying,
+    status character varying DEFAULT 'pending'::character varying NOT NULL,
+    provider_refund_id character varying,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL
 );
@@ -166,11 +199,27 @@ ALTER TABLE ONLY public.charges_default
 
 
 --
+-- Name: ledger_entries ledger_entries_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ledger_entries
+    ADD CONSTRAINT ledger_entries_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: merchants merchants_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.merchants
     ADD CONSTRAINT merchants_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: refunds refunds_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.refunds
+    ADD CONSTRAINT refunds_pkey PRIMARY KEY (id);
 
 
 --
@@ -280,10 +329,52 @@ CREATE UNIQUE INDEX index_api_keys_on_public_key ON public.api_keys USING btree 
 
 
 --
+-- Name: index_ledger_entries_on_charge_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_ledger_entries_on_charge_id ON public.ledger_entries USING btree (charge_id);
+
+
+--
+-- Name: index_ledger_entries_on_merchant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_ledger_entries_on_merchant_id ON public.ledger_entries USING btree (merchant_id);
+
+
+--
+-- Name: index_ledger_entries_on_refund_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_ledger_entries_on_refund_id ON public.ledger_entries USING btree (refund_id);
+
+
+--
 -- Name: index_merchants_on_email; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX index_merchants_on_email ON public.merchants USING btree (email);
+
+
+--
+-- Name: index_refunds_on_charge_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_refunds_on_charge_id ON public.refunds USING btree (charge_id);
+
+
+--
+-- Name: index_refunds_on_merchant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_refunds_on_merchant_id ON public.refunds USING btree (merchant_id);
+
+
+--
+-- Name: index_refunds_on_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_refunds_on_status ON public.refunds USING btree (status);
 
 
 --
@@ -337,11 +428,27 @@ ALTER TABLE public.charges
 
 
 --
+-- Name: refunds fk_rails_0f0ec6083c; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.refunds
+    ADD CONSTRAINT fk_rails_0f0ec6083c FOREIGN KEY (merchant_id) REFERENCES public.merchants(id);
+
+
+--
 -- Name: api_keys fk_rails_28b436c585; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.api_keys
     ADD CONSTRAINT fk_rails_28b436c585 FOREIGN KEY (merchant_id) REFERENCES public.merchants(id);
+
+
+--
+-- Name: ledger_entries fk_rails_9d29e663c8; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ledger_entries
+    ADD CONSTRAINT fk_rails_9d29e663c8 FOREIGN KEY (merchant_id) REFERENCES public.merchants(id);
 
 
 --
@@ -351,6 +458,8 @@ ALTER TABLE ONLY public.api_keys
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260411065858'),
+('20260411065857'),
 ('20260410234641'),
 ('20260409203911'),
 ('20260409203856');
