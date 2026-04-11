@@ -7,7 +7,7 @@ class WebhookEndpoint < ApplicationRecord
   belongs_to :merchant
   has_many :webhook_deliveries, dependent: :destroy
 
-  validates :url, presence: true, format: { with: /\Ahttps?:\/\/.+/, message: "must be a valid URL" }
+  validates :url, presence: true, format: { with: /\Ahttps?:\/\/.+\z/, message: "must be a valid URL" }
   validates :events, presence: true
   validate :events_are_valid
 
