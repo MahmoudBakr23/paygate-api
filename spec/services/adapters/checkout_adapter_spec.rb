@@ -8,81 +8,94 @@ RSpec.describe Adapters::CheckoutAdapter do
   end
 
   describe "#charge" do
-    context "when payment is captured" do
-      before do
-        stub_request(:post, "#{described_class::BASE_URL_SANDBOX}/payments")
-          .to_return(
-            status: 201,
-            headers: { "Content-Type" => "application/json" },
-            body: {
-              id: "pay_checkout_123",
-              status: "Captured",
-              amount: 1000,
-              currency: "SAR"
-            }.to_json
-          )
-      end
-
-      it "returns a captured ChargeResult" do
+    context "with tok_mada (sandbox simulation token)" do
+      it "returns a captured ChargeResult without calling Checkout.com" do
         result = adapter.charge(amount: 1000, currency: "SAR", token: "tok_mada")
 
-        expect(result.provider_charge_id).to eq("pay_checkout_123")
         expect(result.status).to eq("captured")
+        expect(result.provider_charge_id).to start_with("pay_mada_sandbox_")
         expect(result.failure_code).to be_nil
+        expect(WebMock).not_to have_requested(:post, "#{described_class::BASE_URL_SANDBOX}/payments")
       end
     end
 
-    context "when payment is authorized" do
-      before do
-        stub_request(:post, "#{described_class::BASE_URL_SANDBOX}/payments")
-          .to_return(
-            status: 201,
-            headers: { "Content-Type" => "application/json" },
-            body: { id: "pay_checkout_auth", status: "Authorized" }.to_json
-          )
+    context "with a real Checkout.com token" do
+      context "when payment is captured" do
+        before do
+          stub_request(:post, "#{described_class::BASE_URL_SANDBOX}/payments")
+            .to_return(
+              status: 201,
+              headers: { "Content-Type" => "application/json" },
+              body: {
+                id: "pay_checkout_123",
+                status: "Captured",
+                amount: 1000,
+                currency: "SAR"
+              }.to_json
+            )
+        end
+
+        it "returns a captured ChargeResult" do
+          result = adapter.charge(amount: 1000, currency: "SAR", token: "cko_tok_real")
+
+          expect(result.provider_charge_id).to eq("pay_checkout_123")
+          expect(result.status).to eq("captured")
+          expect(result.failure_code).to be_nil
+        end
       end
 
-      it "returns an authorized ChargeResult" do
-        result = adapter.charge(amount: 1000, currency: "SAR", token: "tok_mada")
+      context "when payment is authorized" do
+        before do
+          stub_request(:post, "#{described_class::BASE_URL_SANDBOX}/payments")
+            .to_return(
+              status: 201,
+              headers: { "Content-Type" => "application/json" },
+              body: { id: "pay_checkout_auth", status: "Authorized" }.to_json
+            )
+        end
 
-        expect(result.status).to eq("authorized")
-      end
-    end
+        it "returns an authorized ChargeResult" do
+          result = adapter.charge(amount: 1000, currency: "SAR", token: "cko_tok_real")
 
-    context "when payment is declined" do
-      before do
-        stub_request(:post, "#{described_class::BASE_URL_SANDBOX}/payments")
-          .to_return(
-            status: 422,
-            headers: { "Content-Type" => "application/json" },
-            body: {
-              error_codes: ["card_declined"],
-              message: "Payment was declined"
-            }.to_json
-          )
+          expect(result.status).to eq("authorized")
+        end
       end
 
-      it "returns a failed ChargeResult without raising" do
-        result = adapter.charge(amount: 1000, currency: "SAR", token: "tok_mada_declined")
+      context "when payment is declined" do
+        before do
+          stub_request(:post, "#{described_class::BASE_URL_SANDBOX}/payments")
+            .to_return(
+              status: 422,
+              headers: { "Content-Type" => "application/json" },
+              body: {
+                error_codes: ["card_declined"],
+                message: "Payment was declined"
+              }.to_json
+            )
+        end
 
-        expect(result.status).to eq("failed")
-        expect(result.failure_code).to eq("card_declined")
+        it "returns a failed ChargeResult without raising" do
+          result = adapter.charge(amount: 1000, currency: "SAR", token: "tok_mada_declined")
+
+          expect(result.status).to eq("failed")
+          expect(result.failure_code).to eq("card_declined")
+        end
       end
-    end
 
-    context "when Checkout.com is unreachable" do
-      before do
-        stub_request(:post, "#{described_class::BASE_URL_SANDBOX}/payments")
-          .to_raise(Errno::ECONNREFUSED)
-      end
+      context "when Checkout.com is unreachable" do
+        before do
+          stub_request(:post, "#{described_class::BASE_URL_SANDBOX}/payments")
+            .to_raise(Errno::ECONNREFUSED)
+        end
 
-      it "raises PaygateError with provider_error code" do
-        expect {
-          adapter.charge(amount: 1000, currency: "SAR", token: "tok_mada")
-        }.to raise_error(PaygateError) { |e|
-          expect(e.code).to eq("provider_error")
-          expect(e.status).to eq(:bad_gateway)
-        }
+        it "raises PaygateError with provider_error code" do
+          expect {
+            adapter.charge(amount: 1000, currency: "SAR", token: "cko_tok_real")
+          }.to raise_error(PaygateError) { |e|
+            expect(e.code).to eq("provider_error")
+            expect(e.status).to eq(:bad_gateway)
+          }
+        end
       end
     end
   end
