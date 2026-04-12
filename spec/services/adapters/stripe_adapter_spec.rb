@@ -71,6 +71,25 @@ RSpec.describe Adapters::StripeAdapter do
         end
       end
 
+      context "when card requires 3D Secure authentication" do
+        before do
+          stub_request(:post, "https://api.stripe.com/v1/payment_intents")
+            .to_return(
+              status: 200,
+              headers: { "Content-Type" => "application/json" },
+              body: { id: "pi_test_3ds", status: "requires_action" }.to_json
+            )
+        end
+
+        it "returns a failed ChargeResult with requires_action code" do
+          result = adapter.charge(amount: 1000, currency: "SAR", token: "tok_visa")
+
+          expect(result.status).to eq("failed")
+          expect(result.failure_code).to eq("requires_action")
+          expect(result.failure_message).to include("3D Secure")
+        end
+      end
+
       context "when card is declined" do
         before do
           stub_request(:post, "https://api.stripe.com/v1/payment_intents")

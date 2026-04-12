@@ -15,6 +15,15 @@ module Adapters
         { api_key: api_key }
       )
 
+      if intent.status == "requires_action"
+        return ChargeResult.new(
+          provider_charge_id: intent.id,
+          status: "failed",
+          failure_code: "requires_action",
+          failure_message: "This card requires 3D Secure authentication, which is not supported in server-side-only mode."
+        )
+      end
+
       ChargeResult.new(
         provider_charge_id: intent.id,
         status: map_intent_status(intent.status),
