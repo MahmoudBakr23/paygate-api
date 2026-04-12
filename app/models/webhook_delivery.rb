@@ -1,7 +1,7 @@
 class WebhookDelivery < ApplicationRecord
   STATUSES = %w[pending delivered failed retrying].freeze
   MAX_ATTEMPTS = 5
-  RETRY_DELAYS = [1.minute, 5.minutes, 30.minutes, 2.hours, 24.hours].freeze
+  RETRY_DELAYS = [5.minutes, 30.minutes, 2.hours, 24.hours].freeze
 
   belongs_to :webhook_endpoint
 
