@@ -1,11 +1,13 @@
 module Adapters
   class StripeAdapter < BaseAdapter
     def charge(amount:, currency:, token:, metadata: {})
+      payment_method_id = resolve_payment_method(token)
+
       intent = Stripe::PaymentIntent.create(
         {
           amount: amount,
           currency: currency.downcase,
-          payment_method: token,
+          payment_method: payment_method_id,
           confirm: true,
           automatic_payment_methods: { enabled: true, allow_redirects: "never" },
           metadata: metadata
@@ -84,6 +86,18 @@ module Adapters
     end
 
     private
+
+    # tok_... (legacy token from Stripe.js createToken) must be converted to a
+    # PaymentMethod ID (pm_...) before it can be attached to a PaymentIntent.
+    def resolve_payment_method(token)
+      return token if token.start_with?("pm_")
+
+      pm = Stripe::PaymentMethod.create(
+        { type: "card", card: { token: token } },
+        { api_key: api_key }
+      )
+      pm.id
+    end
 
     def api_key
       if sandbox?
