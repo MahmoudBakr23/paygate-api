@@ -1,6 +1,6 @@
 # Paygate API
 
-A production-grade payment gateway API built as a portfolio project targeting [Moyassar](https://moyasar.com) — Saudi Arabia's leading SAMA-licensed payment gateway. Demonstrates building a gateway from scratch: orchestration layer over Stripe (Visa/MC/Apple Pay) and Checkout.com (Mada), not just integrating one.
+A production-grade payment gateway API built as a portfolio project. Demonstrates building a gateway from scratch: orchestration layer over Stripe (Visa/MC/Apple Pay) and Checkout.com (Mada), not just integrating one.
 
 **Live:** https://paygate-api.fly.dev  
 **OpenAPI spec:** https://paygate-api.fly.dev/api-docs  
