@@ -13,7 +13,7 @@ gem "blueprinter"
 gem "lograge"
 gem "rswag-api"
 gem "rswag-ui"
-gem "stripe", "~> 13.0"
+gem "stripe", "~> 19.2"
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 gem "bootsnap", require: false
 gem "kamal", require: false
